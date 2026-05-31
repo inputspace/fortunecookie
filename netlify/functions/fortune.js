@@ -8,20 +8,19 @@ exports.handler = async (event) => {
   const { prompt } = JSON.parse(event.body);
 
   const payload = JSON.stringify({
-    contents: [{ parts: [{ text: prompt }] }],
-    generationConfig: { temperature: 0.9, maxOutputTokens: 400 }
+    model: 'llama-3.3-70b-versatile',
+    max_tokens: 400,
+    messages: [{ role: 'user', content: prompt }]
   });
-
-  const apiKey = process.env.GEMINI_API_KEY;
-  const path = `/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`;
 
   return new Promise((resolve) => {
     const req = https.request({
-      hostname: 'generativelanguage.googleapis.com',
-      path,
+      hostname: 'api.groq.com',
+      path: '/openai/v1/chat/completions',
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        'Authorization': `Bearer ${process.env.GROQ_API_KEY}`,
         'Content-Length': Buffer.byteLength(payload)
       }
     }, (res) => {
@@ -30,7 +29,7 @@ exports.handler = async (event) => {
       res.on('end', () => {
         try {
           const parsed = JSON.parse(data);
-          const text = parsed.candidates?.[0]?.content?.parts?.[0]?.text || '';
+          const text = parsed.choices?.[0]?.message?.content || '';
           const clean = text.replace(/```json|```/g, '').trim();
           const fortune = JSON.parse(clean);
           resolve({
